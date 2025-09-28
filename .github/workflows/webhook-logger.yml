@@ -1,79 +1,19 @@
 name: Webhook Logger
 
 on:
-  # Triggered by webhook calls to this repository
   repository_dispatch:
     types: [webhook-log]
-  
-  # Also allow manual triggering for testing
-  workflow_dispatch:
-    inputs:
-      test_data:
-        description: 'Test data to log'
-        required: false
-        default: '{"test": "manual trigger"}'
-        type: string
 
 jobs:
-  webhook-logger:
+  log-webhook:
     runs-on: ubuntu-latest
     
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-        
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '18'
-          
-      - name: Install dependencies
-        run: npm install
-        
       - name: Log webhook data
         run: |
-          echo "=== Webhook Received ==="
-          echo "Event Type: ${{ github.event_name }}"
-          echo "Repository: ${{ github.repository }}"
-          echo "Ref: ${{ github.ref }}"
-          echo "SHA: ${{ github.sha }}"
-          echo "Actor: ${{ github.actor }}"
-          echo "Workflow: ${{ github.workflow }}"
-          echo "Run ID: ${{ github.run_id }}"
-          echo "Run Number: ${{ github.run_number }}"
+          echo "=== Webhook Data ==="
+          echo "Query Parameters:"
+          echo '${{ toJson(github.event.client_payload.query_params) }}' | jq .
           echo ""
-          
-          # Log webhook payload if available
-          if [ "${{ github.event_name }}" = "repository_dispatch" ]; then
-            echo "=== Repository Dispatch Payload ==="
-            echo "Action Type: ${{ github.event.action }}"
-            echo "Client Payload:"
-            echo '${{ toJson(github.event.client_payload) }}' | jq .
-          fi
-          
-          # Log manual trigger data if available
-          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
-            echo "=== Manual Trigger Data ==="
-            echo "Test Data: ${{ github.event.inputs.test_data }}"
-          fi
-          
-          # Log all environment variables that might contain webhook data
-          echo ""
-          echo "=== Environment Variables ==="
-          env | grep -E "(GITHUB_|WEBHOOK_|PAYLOAD_)" | sort
-          
-      - name: Save logs to file
-        run: |
-          mkdir -p logs
-          echo "Webhook received at $(date -u +%Y-%m-%dT%H:%M:%SZ)" > logs/webhook-$(date +%s).log
-          echo "Event: ${{ github.event_name }}" >> logs/webhook-$(date +%s).log
-          echo "Repository: ${{ github.repository }}" >> logs/webhook-$(date +%s).log
-          echo "Actor: ${{ github.actor }}" >> logs/webhook-$(date +%s).log
-          echo "Payload: ${{ toJson(github.event) }}" >> logs/webhook-$(date +%s).log
-          
-      - name: Upload logs as artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: webhook-logs-${{ github.run_number }}
-          path: logs/
-          retention-days: 30
+          echo "Body:"
+          echo '${{ toJson(github.event.client_payload.body) }}' | jq .
